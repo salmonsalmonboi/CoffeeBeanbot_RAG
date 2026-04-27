@@ -1,7 +1,0 @@
-train: D:/Vscode-work/datasets/dataset_baseline(A_AA_AAA_B_Chipped)/train
-val: D:/Vscode-work/datasets/dataset_baseline(A_AA_AAA_B_Chipped)/valid
-test: D:/Documents/Vscode-work/datasets/dataset_baseline(A_AA_AAA_B_Chipped)/test
-
-nc: 15
-names: ['A', 'AA', 'AAA', 'B', 'Black', 'Chipped', 'Dry', 'Elephant ear', 'Faded', 'Honey', 'Pea berry', 'Split', 'Triangle', 'Wash', 'Weevil-infested']
-

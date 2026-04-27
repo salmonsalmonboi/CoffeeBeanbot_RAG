@@ -75,7 +75,7 @@ venv.bak/
 .streamlit/
 
 # BeanBot Specific
-data/chroma_db/
+data/
 logs/
 captures/
 hf_cache/
