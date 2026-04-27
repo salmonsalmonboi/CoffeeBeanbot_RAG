@@ -1,0 +1,7 @@
+train: C:/Users/jokoz/Documents/Vscode-work/datasets/dataset_baseline/train
+val: C:/Users/jokoz/Documents/Vscode-work/datasets/dataset_baseline/valid
+test: C:/Users/jokoz/Documents/Vscode-work/datasets/dataset_baseline/test
+
+nc: 15
+names: ['A', 'AA', 'AAA', 'B', 'Black', 'Chipped', 'Dry', 'Elephant ear', 'Faded', 'Honey', 'Pea berry', 'Split', 'Triangle', 'Wash', 'Weevil-infested']
+

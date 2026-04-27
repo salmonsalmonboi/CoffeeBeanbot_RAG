@@ -1,0 +1,36 @@
+# ============================================================
+# BeanBot RAG - Coffee Bean Sorter Assistant
+# Requirements for RAG Chatbot System
+# Python 3.10+
+# ============================================================
+
+# --- Document Parsing & Ingestion ---
+docling>=2.31.0                  # PDF parsing (handles Thai text, tables, academic formats)
+
+# --- LLM Orchestration & RAG ---
+langchain>=0.3.0                 # Core orchestration framework
+langchain-community>=0.3.0       # Community loaders (TextLoader, UnstructuredMarkdownLoader, etc.)
+langchain-huggingface>=0.1.0     # HuggingFace embeddings integration
+langchain-google-genai>=2.1.0    # Google Gemini LLM integration
+langchain-chroma>=0.2.0          # ChromaDB vector store integration
+langchain-text-splitters>=0.3.0  # Text splitting utilities
+
+# --- Embeddings ---
+sentence-transformers>=3.0.0     # For all-MiniLM-L6-v2 local embeddings
+
+# --- Vector Database ---
+chromadb>=0.6.0                  # Local persistent vector store
+
+# --- LLM Provider ---
+google-generativeai>=0.8.0       # Google Gemini API SDK
+
+# --- UI ---
+streamlit>=1.40.0                # Chat-style web interface
+
+# --- Markdown Parsing ---
+unstructured>=0.16.0             # For UnstructuredMarkdownLoader
+markdown>=3.7                    # Markdown support
+
+# --- Utilities ---
+python-dotenv>=1.0.0             # Environment variable management (.env file)
+pyyaml>=6.0                      # YAML file parsing
