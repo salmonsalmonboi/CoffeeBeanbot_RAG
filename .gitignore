@@ -81,4 +81,4 @@ captures/
 hf_cache/
 .chroma/
 
-*.txt
+/*.txt
