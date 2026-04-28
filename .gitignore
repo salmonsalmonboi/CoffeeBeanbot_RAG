@@ -80,3 +80,5 @@ logs/
 captures/
 hf_cache/
 .chroma/
+
+beanot_prompt.txt

@@ -63,9 +63,8 @@ EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
 LLM_MODEL_NAME = "gemini-2.5-flash-lite"
 LLM_TEMPERATURE = 0.1   # Low temperature = more factual, less creative
 
-# Chunks to retrieve — reduced from 5 to 3 to cut input token count
-# (fewer tokens per request = less likely to hit per-minute quota)
-RETRIEVAL_TOP_K = 3
+# Chunks to retrieve — 5 gives richer context across multiple docs
+RETRIEVAL_TOP_K = 5
 
 # ============================================================
 # LOGGING
@@ -83,19 +82,19 @@ log = logging.getLogger("beanbot.pipeline")
 # SYSTEM PROMPT
 # ============================================================
 
-# The core Thai system prompt from the spec, with enhanced instructions added.
-SYSTEM_PROMPT = """คุณคือ 'BeanBot AI Assistant' ที่เชี่ยวชาญโปรเจกต์เครื่องคัดแยกเมล็ดกาแฟอัตโนมัติ \
-หน้าที่ของคุณคือตอบคำถามรุ่นน้องหรือคนอื่นๆที่สนใจโดยอิงจากเอกสารปริญญานิพนธ์และ Paper วิจัยที่ให้มาเท่านั้น
+SYSTEM_PROMPT = """You are 'BeanBot AI Assistant', an expert on the automated coffee bean sorting project.
+Your ONLY knowledge source is the retrieved context below. Never use outside knowledge.
 
-กฎการตอบ:
-1. หากคำถามเกี่ยวกับโค้ด วงจร Arduino หรือโมเดล YOLO ให้ตอบแบบ Step-by-step
-2. ระบุค่าพารามิเตอร์ให้ชัดเจนหากมีในเอกสาร
-3. หากไม่มีข้อมูลในเอกสาร ห้ามเดาเด็ดขาด ให้ตอบว่า 'ในเล่มโครงงานไม่ได้ระบุส่วนนี้ไว้ แนะนำให้ลองทดสอบที่หน้างานจริง'
-4. หากคำถามเป็นภาษาอังกฤษ ให้ตอบเป็นภาษาอังกฤษ หากเป็นภาษาไทย ให้ตอบเป็นภาษาไทย
-5. อ้างอิงชื่อไฟล์หรือส่วนของเอกสารที่ใช้ตอบเสมอ เช่น (จาก: ปริญญานิพนธ์ บทที่ 3) หรือ (Source: args_v12s.yaml)
-6. สำหรับโค้ด ให้แสดงใน code block พร้อม syntax ที่ถูกต้อง
+Rules:
+1. ALWAYS list ALL items explicitly found in the context. Never say "several" or "various" — name every single one.
+2. For code, Arduino circuits, or YOLO model questions: answer step-by-step with exact parameter values.
+3. If the answer is NOT in the context, say: "ในเล่มโครงงานไม่ได้ระบุส่วนนี้ไว้" (Thai) or "This is not documented in the project files." (English). Never guess.
+4. Reply in the SAME language as the question (Thai question → Thai answer, English question → English answer).
+5. Always cite the source filename, e.g. (Source: args_v12s.yaml) or (จาก: ปริญญานิพนธ์ บทที่ 3).
+6. For code: always wrap in a code block with the correct language tag.
+7. If context mentions model versions (e.g. YOLOv8s, YOLO11s, YOLO12s), list ALL of them explicitly.
 
-เอกสารอ้างอิงที่ดึงมา (Context):
+Retrieved Context:
 {context}
 """
 
@@ -249,8 +248,35 @@ def ask_beanbot(question: str, chat_history: list[dict] | None = None) -> BotRes
     # Ensure pipeline is initialized
     initialize_pipeline()
 
-    # --- Step 1: Retrieve relevant chunks ---
-    source_docs: list[Document] = _retriever.invoke(question)
+    # --- Step 1: Retrieve relevant chunks (hybrid: Thai + English keyword expansion) ---
+    # all-MiniLM-L6-v2 is English-optimised, so for Thai questions we ALSO search
+    # with an English translation of key technical terms in the question to improve recall.
+    _THAI_TERM_MAP = {
+        "โมเดล": "model",  "เวอร์ชั่น": "version", "เวอร์ชัน": "version",
+        "ใช้": "used",     "ฝึก": "train",       "ฝึกสอน": "training",
+        "epoch": "epoch",  "ความแม่นยำ": "accuracy", "dataset": "dataset",
+        "ข้อมูล": "data",  "คลาส": "class",       "สี": "color",
+        "กาแฟ": "coffee", "เมล็ด": "bean",        "คัดแยก": "sorting",
+        "สายพาน": "conveyor", "กล้อง": "camera",  "Arduino": "Arduino",
+        "พอร์ต": "port",   "ซีเรียล": "serial",    "ตรวจจับ": "detection",
+        "วงจร": "circuit", "ประมวล": "processing", "real-time": "real-time",
+    }
+    # Build an expanded English query by substituting known Thai→English terms
+    expanded_query = question
+    for thai, eng in _THAI_TERM_MAP.items():
+        expanded_query = expanded_query.replace(thai, eng)
+
+    # Retrieve using original query
+    docs_original = _retriever.invoke(question)
+    # If the expanded query differs, also retrieve with it and merge (deduplicate by content)
+    if expanded_query != question:
+        docs_expanded = _retriever.invoke(expanded_query)
+        seen_contents = {d.page_content for d in docs_original}
+        extra = [d for d in docs_expanded if d.page_content not in seen_contents]
+        source_docs = docs_original + extra[:max(0, RETRIEVAL_TOP_K - len(docs_original))]
+    else:
+        source_docs = docs_original
+
     context_text = _format_docs(source_docs)
 
     # --- Step 2: Build the prompt ---
